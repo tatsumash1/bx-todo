@@ -5,7 +5,8 @@
 //php todo.php list yesterday
 //php todo.php add "WAKE UP"
 //php todo.php add "Drink coffee"
-//php todo.php complete 1 2
+//php todo.php done 1 2
+//php todo.php undone 1 2
 //php todo.php remove 1 (rm)
 
 function main(array $arguments): void
@@ -25,8 +26,11 @@ function main(array $arguments): void
         case 'add':
             addCommand($arguments);
             break;
-        case 'complete':
-            completeCommand($arguments);
+        case 'done':
+            doneCommand($arguments);
+            break;
+        case 'undone':
+            undoneCommand($arguments);
             break;
         default:
             echo "Unknown command: $command\n";
@@ -34,13 +38,85 @@ function main(array $arguments): void
     }
     exit(0);
 }
-
-
-function completeCommand(array $arguments)/// X
+function undoneCommand(array $arguments)///done
 {
+    $fileName = date('Y-m-d') . '.txt';
+    $filePath = __DIR__ . '/data/' . $fileName;
+    if (!file_exists($filePath))
+    {
+        echo "No todos found for today.\n";
+        return;
+    }
 
+    $content = file_get_contents($filePath);
+    $todos = unserialize($content, [
+        'allowed_classes' => false
+    ]);
+
+    if (empty($todos))
+    {
+        echo "No todos found.\n";
+        return;
+    }
+
+
+    foreach ($arguments as $num )
+    {
+        $index = $num -1;
+        if (!isset($todos[$index]))
+        {
+            continue;
+        }
+
+        $todos[$index] = array_merge($todos[$index], [
+            'complete' => false,
+            'update_at' => time(),
+            'complete_at' => null,
+        ]);
+    }
+
+    file_put_contents($filePath, serialize($todos));
 }
+function doneCommand(array $arguments)/// done
+{
+    $fileName = date('Y-m-d') . '.txt';
+    $filePath = __DIR__ . '/data/' . $fileName;
+    if (!file_exists($filePath))
+    {
+        echo "No todos found for today.\n";
+        return;
+    }
 
+    $content = file_get_contents($filePath);
+    $todos = unserialize($content, [
+        'allowed_classes' => false
+    ]);
+
+    if (empty($todos))
+    {
+        echo "No todos found.\n";
+        return;
+    }
+
+    $now = time();
+
+    foreach ($arguments as $num )
+    {
+        $index = $num -1;
+        if (!isset($todos[$index]))
+        {
+            continue;
+        }
+
+        $todos[$index] = array_merge($todos[$index], [
+            'complete' => true,
+            'update_at' => $now,
+            'complete_at' => $now,
+        ]);
+    }
+
+    file_put_contents($filePath, serialize($todos));
+}
 function addCommand(array $arguments) //done
 {
     $title = array_shift($arguments);
@@ -49,6 +125,9 @@ function addCommand(array $arguments) //done
         'id' => uniqid(),
         'title' => $title,
         'complete'  => false,
+        'created_at' => time(),
+        'updated_at' => null,
+        'completed_at' => null,
     ];
 
     $fileName = date('Y-m-d') . '.txt';
@@ -71,12 +150,42 @@ function addCommand(array $arguments) //done
     file_put_contents($filePath, $title. "\n", FILE_APPEND);
 
 }
-
 function removeCommand(array $arguments) // X
 {
+    $fileName = date('Y-m-d') . '.txt';
+    $filePath = __DIR__ . '/data/' . $fileName;
+    if (!file_exists($filePath))
+    {
+        echo "No todos found for today.\n";
+        return;
+    }
 
+    $content = file_get_contents($filePath);
+    $todos = unserialize($content, [
+        'allowed_classes' => false
+    ]);
+
+    if (empty($todos))
+    {
+        echo "No todos found.\n";
+        return;
+    }
+
+
+    foreach ($arguments as $num )
+    {
+        $index = $num -1;
+        if (!isset($todos[$index]))
+        {
+            continue;
+        }
+
+        unset($todos[$index]);
+    }
+    $todos = array_values($todos)
+
+    file_put_contents($filePath, serialize($todos));
 }
-
 function listCommand(array $arguments) //done
 {
     $fileName = date('Y-m-d') . '.txt';
@@ -109,7 +218,7 @@ function listCommand(array $arguments) //done
         {
             echo sprintf("%s. [%s] %s \n",
             ($index+1),
-            $todo['completed'] ? 'X': ' ', 
+            $todo['complete'] ? 'X': ' ',
             $todo ['title']);
             //echo ($index +1) . " " .$todo['title'] . PHP_EOL;
         }
